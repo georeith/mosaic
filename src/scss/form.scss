@@ -1,0 +1,40 @@
+form {
+    padding-left: 1px;
+    padding-right: 1px;
+}
+
+button, input, optgroup, select, textarea {
+    color: inherit;
+    font: inherit;
+    margin: 0;
+}
+
+.checkbox, .form-group, .radio {
+    margin-bottom: 10px;
+}
+
+.checkbox, .radio {
+    position: relative;
+    display: block;
+    margin-top: 10px;
+}
+
+.form-control {
+    width: 100%;
+    min-height: 1.563rem;
+    padding: 0.313rem 0.625rem;
+    line-height: 1.6;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    outline: 0;
+}
+
+.form-control, label {
+    display: inline-block;
+    font-size: 0.813rem;
+}
+
+label {
+    margin-bottom: 0.313em;
+}

@@ -1,9 +1,7 @@
-export default (state = {}, action) => {
+export default (state = null, action) => {
     switch (action.type) {
-        case 'SET_IMAGE_SRC':
-            return Object.assign({}, state, {
-                imageSrc: action.imageSrc,
-            });
+        case 'SET_IMAGE_BITMAP':
+            return action.imageBitmap;
 
         default:
             return state;

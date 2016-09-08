@@ -3,7 +3,7 @@ module.exports = {
         'browser': true,
     },
     'rules': {
-        'import/no-extraneous-dependencies': ['error', { devDependencies: true }],
+        'import/no-extraneous-dependencies': ['off', { devDependencies: true }], // set to error when https://github.com/benmosher/eslint-plugin-import/issues/496 is fixed
 
         // react rules
         'react/jsx-indent': [2, 4],

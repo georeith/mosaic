@@ -13,9 +13,13 @@ module.exports = Object.assign({}, common, {
         ],
         loaders: [
             {
-                exclude: /node_modules/,
-                loaders: ['babel-loader', 'eslint-loader'],
                 test: /\.jsx?$/,
+                loaders: ['babel-loader', 'eslint-loader'],
+                exclude: /node_modules/,
+            },
+            {
+                test: /\.scss$/,
+                loaders: ['style', 'css', 'sass'],
             },
         ],
     },

@@ -1,4 +1,4 @@
-export const setImageSrc = imageSrc => ({
-    type: 'SET_IMAGE_SRC',
-    imageSrc,
+export const setImageBitmap = imageBitmap => ({
+    type: 'SET_IMAGE_BITMAP',
+    imageBitmap,
 });
