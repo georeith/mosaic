@@ -4,6 +4,7 @@ import PanelContainer from '~/components/PanelContainer.jsx';
 import Panel from '~/components/Panel.jsx';
 import ImageControls from '~/components/ImageControls.jsx';
 import ImageViewer from '~/components/ImageViewer.jsx';
+import OutputViewer from '~/components/OutputViewer.jsx';
 
 export default function () {
     return (
@@ -20,7 +21,9 @@ export default function () {
                     <ImageViewer />
                 </PanelContainer>
             </Panel>
-            <Panel label="Output" />
+            <Panel label="Output">
+                <OutputViewer />
+            </Panel>
         </PanelContainer>
     );
 }
