@@ -10,6 +10,7 @@ const mapStateToProps = state => ({
     serpentineDithering: state.options.serpentineDithering,
 });
 
+const pieceSize = 7;
 class OutputViewer extends React.Component {
     static propTypes = {
         imageBitmap: React.PropTypes.object,
@@ -40,15 +41,23 @@ class OutputViewer extends React.Component {
     drawImage() {
         const imageBitmap = this.props.imageBitmap;
         if (imageBitmap) {
-            console.log(this.props.serpentineDithering);
             const rgbQuant = new RgbQuant({
                 colors: this.props.colorCount,
-                minHueColors: 3,
                 dithKern: this.props.ditheringType,
                 dithSerp: this.props.serpentineDithering,
+                minHueCols: 256,
+                palette: [
+                    [209, 242, 165],
+                    [239, 250, 180],
+                    [255, 196, 140],
+                    [255, 159, 128],
+                    [245, 105, 145],
+                    [255, 255, 255],
+                    [0, 0, 0],
+                ],
             });
-            // const { width, height } = this.closestDimensionsWithArea(this.props.pieceCount, imageBitmap.width, imageBitmap.height);
-            const { width, height } = imageBitmap;
+            // const { width, height } = imageBitmap;
+            const { width, height } = this.closestDimensionsWithArea(this.props.pieceCount, imageBitmap.width, imageBitmap.height);
             const sampleCanvas = document.createElement('canvas');
             sampleCanvas.width = width;
             sampleCanvas.height = height;
@@ -59,15 +68,32 @@ class OutputViewer extends React.Component {
             const context = this.canvas.getContext('2d');
             const imageData = context.createImageData(width, height);
             imageData.data.set(quantUint8Array);
-            context.putImageData(imageData, 0, 0);
+            context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const i = ((y * width) + x) * 4;
+                    const rgb = quantUint8Array.slice(i, i + 3);
+                    this.drawCircle(context, x * pieceSize, y * pieceSize, pieceSize / 2, rgb);
+                }
+            }
         }
     }
 
+    drawCircle(context, x, y, radius, [red, green, blue]) {
+        context.save();
+        context.beginPath();
+        context.arc(x + radius, y + radius, radius, 0, 2 * Math.PI, false);
+        /* eslint-disable no-param-reassign */
+        context.fillStyle = `rgb(${red},${green},${blue})`;
+        /* eslint-enable no-param-reassign */
+        context.fill();
+        context.closePath();
+        context.restore();
+    }
+
     render() {
-        const imageBitmap = this.props.imageBitmap || {
-            width: 0,
-            height: 0,
-        };
+        const imageBitmap = this.props.imageBitmap || { width: 0, height: 0 };
+        const { width, height } = this.closestDimensionsWithArea(this.props.pieceCount, imageBitmap.width, imageBitmap.height);
 
         return (
             <div
@@ -81,8 +107,8 @@ class OutputViewer extends React.Component {
                 }}>
                 <canvas
                     ref={canvas => { this.canvas = canvas; }}
-                    width={imageBitmap.width}
-                    height={imageBitmap.height}
+                    width={width * pieceSize}
+                    height={height * pieceSize}
                 />
             </div>
         );

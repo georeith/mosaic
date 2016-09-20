@@ -1,5 +1,5 @@
 const defaultState = {
-    pieceCount: 2000,
+    pieceCount: 3000,
     colorCount: 26,
     ditheringType: 'FloydSteinberg',
     serpentineDithering: false,
