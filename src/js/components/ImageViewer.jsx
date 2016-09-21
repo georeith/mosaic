@@ -3,15 +3,23 @@ import { connect } from 'react-redux';
 
 const mapStateToProps = state => ({
     imageBitmap: state.image,
-    maxWidth: (state.image && state.image.width) || 0,
-    maxHeight: (state.image && state.image.height) || 0,
+    maxBounds: state.image ? {
+        left: 0,
+        top: 0,
+        right: state.image.width,
+        bottom: state.image.height,
+    } : {
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+    },
 });
 
 class ImageViewer extends React.Component {
     static propTypes = {
         imageBitmap: React.PropTypes.object,
-        maxWidth: React.PropTypes.number,
-        maxHeight: React.PropTypes.number,
+        maxBounds: React.PropTypes.object,
     };
 
     constructor(props) {
@@ -26,12 +34,6 @@ class ImageViewer extends React.Component {
             dragging: false,
             dragOrigin: { x: 0, y: 0 },
             dragEnd: { x: 0, y: 0 },
-            maxBounds: {
-                left: 0,
-                top: 0,
-                right: props.maxWidth,
-                bottom: props.maxHeight,
-            },
         };
     }
 
@@ -40,21 +42,8 @@ class ImageViewer extends React.Component {
     }
 
     componentWillReceiveProps(nextProps) {
-        const { maxWidth, maxHeight } = nextProps;
-        this.setState({
-            maskBounds: {
-                left: 0,
-                top: 0,
-                right: maxWidth,
-                bottom: maxHeight,
-            },
-            maxBounds: {
-                left: 0,
-                top: 0,
-                right: maxWidth,
-                bottom: maxHeight,
-            },
-        });
+        const { left, top, right, bottom } = nextProps.maxBounds;
+        this.setState({ maskBounds: { left, top, right, bottom } });
     }
 
     componentDidUpdate() {
@@ -85,7 +74,7 @@ class ImageViewer extends React.Component {
             { x: dragOrigin.x - dragOffset.x, y: dragOrigin.y - dragOffset.y },
             { x: event.pageX - dragOffset.x, y: event.pageY - dragOffset.y },
         );
-        const maskBounds = this.intersectRectangles(dragBounds, this.state.maxBounds);
+        const maskBounds = this.intersectRectangles(dragBounds, this.props.maxBounds);
         this.setState({ maskBounds });
     }
 
