@@ -31,10 +31,15 @@ class ImageViewer extends React.Component {
                 right: 0,
                 bottom: 0,
             },
-            dragging: false,
+            lockAspectRatio: false,
             dragOrigin: { x: 0, y: 0 },
             dragEnd: { x: 0, y: 0 },
         };
+    }
+
+    componentWillMount() {
+        document.addEventListener('keydown', this.keyDown, false);
+        document.addEventListener('keyup', this.keyUp, false);
     }
 
     componentDidMount() {
@@ -50,10 +55,27 @@ class ImageViewer extends React.Component {
         this.drawImage();
     }
 
+    componentWillUnmount() {
+        document.removeEventListener('keydown', this.keyDown, false);
+        document.removeEventListener('keyup', this.keyUp, false);
+    }
+
     drawImage() {
         if (this.props.imageBitmap) {
             const context = this.canvas.getContext('2d');
             context.drawImage(this.props.imageBitmap, 0, 0);
+        }
+    }
+
+    keyDown = (event) => {
+        if (event.key === 'Shift') {
+            this.setState({ lockAspectRatio: true });
+        }
+    }
+
+    keyUp = (event) => {
+        if (event.key === 'Shift') {
+            this.setState({ lockAspectRatio: false });
         }
     }
 
@@ -70,11 +92,38 @@ class ImageViewer extends React.Component {
 
     mouseMove = (event) => {
         const { dragOrigin, dragOffset } = this.state;
+        const relativeDragStart = { x: dragOrigin.x - dragOffset.x, y: dragOrigin.y - dragOffset.y };
+        const relativeDragEnd = { x: event.pageX - dragOffset.x, y: event.pageY - dragOffset.y };
         const dragBounds = this.rectangleBetweenPoints(
-            { x: dragOrigin.x - dragOffset.x, y: dragOrigin.y - dragOffset.y },
-            { x: event.pageX - dragOffset.x, y: event.pageY - dragOffset.y },
+            relativeDragStart,
+            relativeDragEnd
         );
-        const maskBounds = this.intersectRectangles(dragBounds, this.props.maxBounds);
+        const { maxBounds } = this.props;
+        const maskBounds = this.intersectRectangles(dragBounds, maxBounds);
+        if (this.state.lockAspectRatio) {
+            const width = maskBounds.right - maskBounds.left;
+            const height = maskBounds.bottom - maskBounds.top;
+            const positiveX = relativeDragStart.x <= relativeDragEnd.x;
+            const positiveY = relativeDragStart.y <= relativeDragEnd.y;
+            const maxWidth = positiveX
+                ? maxBounds.right - maskBounds.left
+                : maskBounds.right - maxBounds.left;
+            const maxHeight = positiveY
+                ? maxBounds.bottom - maskBounds.top
+                : maskBounds.bottom - maxBounds.top;
+            const length = Math.min(width, height, maxWidth, maxHeight);
+
+            if (positiveX) {
+                maskBounds.right = maskBounds.left + length;
+            } else {
+                maskBounds.left = maskBounds.right - length;
+            }
+            if (positiveY) {
+                maskBounds.bottom = maskBounds.top + length;
+            } else {
+                maskBounds.top = maskBounds.bottom - length;
+            }
+        }
         this.setState({ maskBounds });
     }
 

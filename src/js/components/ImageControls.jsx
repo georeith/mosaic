@@ -68,7 +68,7 @@ export default connect(mapStateToProps)(({
                     onChange={event => dispatch(setPieceCount(event.target.value))}
                     type="number"
                     min="1"
-                    step="1"
+                    step="100"
                     id="piece-count-input"
                     value={pieceCount}
                     className="form-control"
