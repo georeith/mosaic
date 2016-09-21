@@ -117,6 +117,7 @@ export default connect(mapStateToProps)(({
                 <input
                     type="checkbox"
                     id="serpentine-dithering-input"
+                    disabled={!ditheringType}
                     checked={serpentineDithering}
                     onChange={event => dispatch(setSerpentineDithering(event.target.checked))}
                 />
