@@ -79,18 +79,18 @@ class ImageViewer extends React.Component {
         }
     }
 
-    mouseDown = (event) => {
+    marqueeDrawStart = (event) => {
         event.preventDefault();
         const offset = this.mask.getBoundingClientRect();
         this.setState({
             dragOffset: { x: offset.left, y: offset.top },
             dragOrigin: { x: event.pageX, y: event.pageY },
         });
-        document.addEventListener('mousemove', this.mouseMove, false);
-        document.addEventListener('mouseup', this.mouseUp, false);
+        document.addEventListener('mousemove', this.marqueeDrawDrag, false);
+        document.addEventListener('mouseup', this.marqueeDrawEnd, false);
     }
 
-    mouseMove = (event) => {
+    marqueeDrawDrag = (event) => {
         const { dragOrigin, dragOffset } = this.state;
         const relativeDragStart = { x: dragOrigin.x - dragOffset.x, y: dragOrigin.y - dragOffset.y };
         const relativeDragEnd = { x: event.pageX - dragOffset.x, y: event.pageY - dragOffset.y };
@@ -127,9 +127,9 @@ class ImageViewer extends React.Component {
         this.setState({ maskBounds });
     }
 
-    mouseUp = () => {
-        document.removeEventListener('mousemove', this.mouseMove, false);
-        document.removeEventListener('mouseup', this.mouseUp, false);
+    marqueeDrawEnd = () => {
+        document.removeEventListener('mousemove', this.marqueeDrawDrag, false);
+        document.removeEventListener('mouseup', this.marqueeDrawEnd, false);
 
         this.setState({ dragOrigin: { x: 0, y: 0 } });
     }
@@ -167,10 +167,10 @@ class ImageViewer extends React.Component {
         };
 
         const { maskBounds } = this.state;
-
+        const maskHasBounds = maskBounds.left - maskBounds.right !== 0 && maskBounds.top - maskBounds.bottom !== 0;
         return (
             <div
-                onMouseDown={this.mouseDown}
+                onMouseDown={this.marqueeDrawStart}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -211,6 +211,14 @@ class ImageViewer extends React.Component {
                                     height={maskBounds.bottom - maskBounds.top}
                                 />
                             </mask>
+                            <filter id="dropshadow" height="130%">
+                                <feGaussianBlur in="SourceAlpha" stdDeviation="3" /> {/* blur */}
+                                <feOffset dx="0" dy="0" result="offsetblur" /> {/* offset */}
+                                <feMerge>
+                                    <feMergeNode />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
                         </defs>
                         <rect
                             width={width}
@@ -219,6 +227,45 @@ class ImageViewer extends React.Component {
                             fillOpacity={0.5}
                             mask="url(#aperture)"
                         />
+                        <g visibility={maskHasBounds ? 'visible' : 'hidden'} style={{ filter: 'url(#dropshadow)' }}>
+                            <rect
+                                x={maskBounds.left}
+                                y={maskBounds.top}
+                                width={maskBounds.right - maskBounds.left}
+                                height={maskBounds.bottom - maskBounds.top}
+                                stroke="white"
+                                strokeWidth="1"
+                                fill="none"
+                            />
+                            <circle
+                                id="north"
+                                cx={(maskBounds.left + maskBounds.right) / 2}
+                                cy={maskBounds.top}
+                                fill="white"
+                                r="4"
+                            />
+                            <circle
+                                id="east"
+                                cx={maskBounds.right}
+                                cy={(maskBounds.top + maskBounds.bottom) / 2}
+                                fill="white"
+                                r="4"
+                            />
+                            <circle
+                                id="south"
+                                cx={(maskBounds.left + maskBounds.right) / 2}
+                                cy={maskBounds.bottom}
+                                fill="white"
+                                r="4"
+                            />
+                            <circle
+                                id="west"
+                                cx={maskBounds.left}
+                                cy={(maskBounds.top + maskBounds.bottom) / 2}
+                                fill="white"
+                                r="4"
+                            />
+                        </g>
                     </svg>
                 </div>
             </div>
