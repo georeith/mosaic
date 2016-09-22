@@ -25,15 +25,17 @@ class ImageViewer extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            maskBounds: {
+            marqueeBounds: {
                 left: 0,
                 top: 0,
                 right: 0,
                 bottom: 0,
             },
+            lockTranslate: false,
             lockAspectRatio: false,
             dragOrigin: { x: 0, y: 0 },
             dragEnd: { x: 0, y: 0 },
+            lastDrag: { x: 0, y: 0 },
         };
     }
 
@@ -48,7 +50,7 @@ class ImageViewer extends React.Component {
 
     componentWillReceiveProps(nextProps) {
         const { left, top, right, bottom } = nextProps.maxBounds;
-        this.setState({ maskBounds: { left, top, right, bottom } });
+        this.setState({ marqueeBounds: { left, top, right, bottom } });
     }
 
     componentDidUpdate() {
@@ -68,68 +70,120 @@ class ImageViewer extends React.Component {
     }
 
     keyDown = (event) => {
-        if (event.key === 'Shift') {
-            this.setState({ lockAspectRatio: true });
+        let preventDefault = true;
+        switch (event.key) {
+            case 'Shift':
+                this.setState({ lockAspectRatio: true });
+                break;
+            case ' ':
+                this.setState({ lockTranslate: true });
+                break;
+            default:
+                preventDefault = false;
+                break;
         }
+        if (preventDefault) event.preventDefault();
     }
 
     keyUp = (event) => {
-        if (event.key === 'Shift') {
-            this.setState({ lockAspectRatio: false });
+        let preventDefault = true;
+        switch (event.key) {
+            case 'Shift':
+                this.setState({ lockAspectRatio: false });
+                break;
+            case ' ':
+                this.setState({ lockTranslate: false });
+                break;
+            default:
+                preventDefault = false;
+                break;
         }
+        if (preventDefault) event.preventDefault();
     }
 
-    marqueeDrawStart = (event) => {
-        event.preventDefault();
-        const offset = this.mask.getBoundingClientRect();
-        this.setState({
-            dragOffset: { x: offset.left, y: offset.top },
-            dragOrigin: { x: event.pageX, y: event.pageY },
-        });
-        document.addEventListener('mousemove', this.marqueeDrawDrag, false);
-        document.addEventListener('mouseup', this.marqueeDrawEnd, false);
-    }
-
-    marqueeDrawDrag = (event) => {
-        const { dragOrigin, dragOffset } = this.state;
-        const relativeDragStart = { x: dragOrigin.x - dragOffset.x, y: dragOrigin.y - dragOffset.y };
-        const relativeDragEnd = { x: event.pageX - dragOffset.x, y: event.pageY - dragOffset.y };
-        const dragBounds = this.rectangleBetweenPoints(
-            relativeDragStart,
-            relativeDragEnd
-        );
+    drawMarquee = (origin, end) => {
+        const totalBounds = this.rectangleBetweenPoints(origin, end);
         const { maxBounds } = this.props;
-        const maskBounds = this.intersectRectangles(dragBounds, maxBounds);
+        const marqueeBounds = this.intersectRectangles(totalBounds, maxBounds);
         if (this.state.lockAspectRatio) {
-            const width = maskBounds.right - maskBounds.left;
-            const height = maskBounds.bottom - maskBounds.top;
-            const positiveX = relativeDragStart.x <= relativeDragEnd.x;
-            const positiveY = relativeDragStart.y <= relativeDragEnd.y;
+            const width = marqueeBounds.right - marqueeBounds.left;
+            const height = marqueeBounds.bottom - marqueeBounds.top;
+            const positiveX = origin.x <= end.x;
+            const positiveY = origin.y <= end.y;
             const maxWidth = positiveX
-                ? maxBounds.right - maskBounds.left
-                : maskBounds.right - maxBounds.left;
+                ? maxBounds.right - marqueeBounds.left
+                : marqueeBounds.right - maxBounds.left;
             const maxHeight = positiveY
-                ? maxBounds.bottom - maskBounds.top
-                : maskBounds.bottom - maxBounds.top;
+                ? maxBounds.bottom - marqueeBounds.top
+                : marqueeBounds.bottom - maxBounds.top;
             const length = Math.min(width, height, maxWidth, maxHeight);
 
             if (positiveX) {
-                maskBounds.right = maskBounds.left + length;
+                marqueeBounds.right = marqueeBounds.left + length;
             } else {
-                maskBounds.left = maskBounds.right - length;
+                marqueeBounds.left = marqueeBounds.right - length;
             }
             if (positiveY) {
-                maskBounds.bottom = maskBounds.top + length;
+                marqueeBounds.bottom = marqueeBounds.top + length;
             } else {
-                maskBounds.top = maskBounds.bottom - length;
+                marqueeBounds.top = marqueeBounds.bottom - length;
             }
         }
-        this.setState({ maskBounds });
+        this.setState({ marqueeBounds });
     }
 
-    marqueeDrawEnd = () => {
-        document.removeEventListener('mousemove', this.marqueeDrawDrag, false);
-        document.removeEventListener('mouseup', this.marqueeDrawEnd, false);
+    translateMarquee = ({ x = 0, y = 0 }) => {
+        const { marqueeBounds } = this.state;
+        const { maxBounds } = this.props;
+        const minDelta = {
+            x: maxBounds.left - marqueeBounds.left,
+            y: maxBounds.top - marqueeBounds.top,
+        };
+        const maxDelta = {
+            x: maxBounds.right - marqueeBounds.right,
+            y: maxBounds.bottom - marqueeBounds.bottom,
+        };
+        const delta = {
+            x: Math.min(Math.max(x, minDelta.x), maxDelta.x),
+            y: Math.min(Math.max(y, minDelta.y), maxDelta.y),
+        };
+        this.setState({
+            marqueeBounds: {
+                left: marqueeBounds.left + delta.x,
+                right: marqueeBounds.right + delta.x,
+                top: marqueeBounds.top + delta.y,
+                bottom: marqueeBounds.bottom + delta.y,
+            },
+        });
+    }
+
+    marqueeDragStart = (event) => {
+        event.preventDefault();
+        const offset = this.mask.getBoundingClientRect();
+        this.setState({
+            dragEnd: { x: offset.left, y: offset.top },
+            dragOrigin: { x: event.pageX, y: event.pageY },
+        });
+        document.addEventListener('mousemove', this.marqueeDrag, false);
+        document.addEventListener('mouseup', this.marqueeDragEnd, false);
+    }
+
+    marqueeDrag = (event) => {
+        const { dragOrigin, dragEnd, lockTranslate } = this.state;
+        if (lockTranslate) {
+            const { lastDrag } = this.state;
+            this.translateMarquee({ x: event.pageX - lastDrag.x, y: event.pageY - lastDrag.y });
+        } else {
+            const relativeDragOrigin = { x: dragOrigin.x - dragEnd.x, y: dragOrigin.y - dragEnd.y };
+            const relativeDragEnd = { x: event.pageX - dragEnd.x, y: event.pageY - dragEnd.y };
+            this.drawMarquee(relativeDragOrigin, relativeDragEnd);
+        }
+        this.setState({ lastDrag: { x: event.pageX, y: event.pageY } });
+    }
+
+    marqueeDragEnd = () => {
+        document.removeEventListener('mousemove', this.marqueeDrag, false);
+        document.removeEventListener('mouseup', this.marqueeDragEnd, false);
 
         this.setState({ dragOrigin: { x: 0, y: 0 } });
     }
@@ -166,11 +220,11 @@ class ImageViewer extends React.Component {
             height: 0,
         };
 
-        const { maskBounds } = this.state;
-        const maskHasBounds = maskBounds.left - maskBounds.right !== 0 && maskBounds.top - maskBounds.bottom !== 0;
+        const { marqueeBounds } = this.state;
+        const maskHasBounds = marqueeBounds.left - marqueeBounds.right !== 0 && marqueeBounds.top - marqueeBounds.bottom !== 0;
         return (
             <div
-                onMouseDown={this.marqueeDrawStart}
+                onMouseDown={this.marqueeDragStart}
                 style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -205,10 +259,10 @@ class ImageViewer extends React.Component {
                             <mask id="aperture">
                                 <rect width={width} height={height} fill="white" />
                                 <rect
-                                    x={maskBounds.left}
-                                    y={maskBounds.top}
-                                    width={maskBounds.right - maskBounds.left}
-                                    height={maskBounds.bottom - maskBounds.top}
+                                    x={marqueeBounds.left}
+                                    y={marqueeBounds.top}
+                                    width={marqueeBounds.right - marqueeBounds.left}
+                                    height={marqueeBounds.bottom - marqueeBounds.top}
                                 />
                             </mask>
                             <filter id="dropshadow" height="130%">
@@ -229,39 +283,39 @@ class ImageViewer extends React.Component {
                         />
                         <g visibility={maskHasBounds ? 'visible' : 'hidden'} style={{ filter: 'url(#dropshadow)' }}>
                             <rect
-                                x={maskBounds.left}
-                                y={maskBounds.top}
-                                width={maskBounds.right - maskBounds.left}
-                                height={maskBounds.bottom - maskBounds.top}
+                                x={marqueeBounds.left}
+                                y={marqueeBounds.top}
+                                width={marqueeBounds.right - marqueeBounds.left}
+                                height={marqueeBounds.bottom - marqueeBounds.top}
                                 stroke="white"
                                 strokeWidth="1"
                                 fill="none"
                             />
                             <circle
                                 id="north"
-                                cx={(maskBounds.left + maskBounds.right) / 2}
-                                cy={maskBounds.top}
+                                cx={(marqueeBounds.left + marqueeBounds.right) / 2}
+                                cy={marqueeBounds.top}
                                 fill="white"
                                 r="4"
                             />
                             <circle
                                 id="east"
-                                cx={maskBounds.right}
-                                cy={(maskBounds.top + maskBounds.bottom) / 2}
+                                cx={marqueeBounds.right}
+                                cy={(marqueeBounds.top + marqueeBounds.bottom) / 2}
                                 fill="white"
                                 r="4"
                             />
                             <circle
                                 id="south"
-                                cx={(maskBounds.left + maskBounds.right) / 2}
-                                cy={maskBounds.bottom}
+                                cx={(marqueeBounds.left + marqueeBounds.right) / 2}
+                                cy={marqueeBounds.bottom}
                                 fill="white"
                                 r="4"
                             />
                             <circle
                                 id="west"
-                                cx={maskBounds.left}
-                                cy={(maskBounds.top + maskBounds.bottom) / 2}
+                                cx={marqueeBounds.left}
+                                cy={(marqueeBounds.top + marqueeBounds.bottom) / 2}
                                 fill="white"
                                 r="4"
                             />
